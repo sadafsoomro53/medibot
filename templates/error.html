@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ code }} · MediBot</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='theme.js') }}"></script>
+</head>
+<body>
+  <main class="error-page">
+    <p class="error-code">{{ code }}</p>
+    <h1>{{ message }}</h1>
+    <p>Sorry, something went wrong with that page.</p>
+    <a class="new-chat" href="/">Back to MediBot</a>
+  </main>
+</body>
+</html>

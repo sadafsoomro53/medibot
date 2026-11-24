@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{{ title }} · Shared from MediBot</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='features.css') }}">
+  <script src="{{ url_for('static', filename='theme.js') }}"></script>
+  <script src="{{ url_for('static', filename='markdown.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='share.js') }}" defer></script>
+</head>
+<body class="share-page">
+  <script type="application/json" id="shareData">{{ data | tojson }}</script>
+  <div class="share-wrap">
+    <header class="share-head">
+      <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg></span><span class="brand-name">MediBot</span></a>
+      <div class="share-actions">
+        <button class="ghost-btn" id="printBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"/></svg><span>Export PDF</span></button>
+        <a class="primary-btn" href="/">Ask your own question</a>
+      </div>
+    </header>
+    <h1 class="share-title" id="shareTitle" dir="auto"></h1>
+    <p class="share-note">Shared conversation (read-only). General information only, not medical advice.</p>
+    <div class="messages" id="messages"></div>
+  </div>
+</body>
+</html>

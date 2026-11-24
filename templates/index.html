@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <meta name="description" content="MediBot: an AI assistant that answers general medical questions using trusted medical references.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0f766e">
+  <title>MediBot · AI Medical Assistant</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='features.css') }}">
+  <script src="{{ url_for('static', filename='theme.js') }}"></script>
+  <script src="{{ url_for('static', filename='markdown.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='background.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+  <div class="app" id="app"
+       data-max-chars="{{ max_chars }}"
+       data-user="{{ user | tojson | forceescape }}"
+       data-google="{{ 'true' if google_enabled else 'false' }}"
+       data-emergency="{{ emergency_numbers | forceescape }}">
+
+    <!-- ============ Sidebar ============ -->
+    <aside class="sidebar" id="sidebar" aria-label="Chat history">
+      <div class="sidebar-top">
+        <a class="brand" href="/" aria-label="MediBot home">
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg></span>
+          <span class="brand-name">MediBot</span>
+        </a>
+        <button class="icon-btn only-mobile" id="closeSidebar" aria-label="Close sidebar">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <button class="new-chat" id="newChat">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        <span data-i18n="newChat">New chat</span>
+      </button>
+
+      <div class="tools" role="group" aria-label="Tools">
+        <button class="tool" id="toolSymptom">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+          <span data-i18n="symptomChecker">Symptom checker</span>
+        </button>
+        <button class="tool" id="toolLabs">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6L5 19a2 2 0 002 2h10a2 2 0 002-2l-5-10V3"/><path d="M7.5 14h9"/></svg>
+          <span data-i18n="labReport">Explain lab report</span>
+        </button>
+        <button class="tool" id="toolMedicine">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="8" rx="4" transform="rotate(-45 12 12)"/><path d="M9.2 9.2l5.6 5.6"/></svg>
+          <span data-i18n="medicineLookup">Medicine lookup</span>
+        </button>
+      </div>
+
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input type="search" id="searchChats" data-i18n-placeholder="searchChats" placeholder="Search chats" aria-label="Search chats" autocomplete="off">
+      </div>
+
+      <nav class="history" id="history" aria-label="Previous conversations">
+        <p class="history-empty" id="historyEmpty">Your conversations will appear here.</p>
+        <ul id="historyList"></ul>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="account" id="account"></div>
+        <div class="settings-row">
+          <button class="ghost-btn" id="langToggle" aria-label="Switch language">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h8M8 3v2M6 5c0 4 2 7 6 9M10 5c0 3-2 7-6 9M13 21l4-9 4 9M14.5 18h5"/></svg>
+            <span id="langLabel">اردو</span>
+          </button>
+          <button class="ghost-btn" id="themeToggle" aria-label="Toggle dark mode">
+            <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 13A9 9 0 1111 3a7 7 0 0010 10z"/></svg>
+            <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+            <span data-i18n="theme">Theme</span>
+          </button>
+          <button class="ghost-btn" id="installApp" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+            <span data-i18n="install">Install app</span>
+          </button>
+        </div>
+        <button class="ghost-btn danger" id="clearAll">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+          <span data-i18n="clearHistory">Clear history</span>
+        </button>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim" hidden></div>
+
+    <!-- ============ Main ============ -->
+    <main class="main">
+      <div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+      <canvas id="bg-canvas" aria-hidden="true"></canvas>
+      <header class="topbar">
+        <button class="icon-btn only-mobile" id="openSidebar" aria-label="Open sidebar">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <h1 class="topbar-title" id="chatTitle">New chat</h1>
+        <span class="mode-badge" id="modeBadge" hidden></span>
+        <div class="topbar-actions" id="chatActions" hidden>
+          <button class="icon-btn" id="shareBtn" data-i18n-title="share" title="Share">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+          </button>
+          <button class="icon-btn" id="exportBtn" data-i18n-title="exportPdf" title="Export PDF">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"/></svg>
+          </button>
+        </div>
+        <span class="status" id="status" data-state="loading">
+          <span class="dot" aria-hidden="true"></span><span class="status-text">Connecting…</span>
+        </span>
+      </header>
+
+      <section class="thread" id="thread" aria-live="polite">
+        <div class="emergency" id="emergency" role="alert" hidden>
+          <div class="emergency-icon" aria-hidden="true">!</div>
+          <div class="emergency-body">
+            <strong data-i18n="emergencyTitle">This may be an emergency.</strong>
+            <span data-i18n="emergencyText">If you or someone else is in danger, call emergency services now.</span>
+            <div class="emergency-numbers" id="emergencyNumbers"></div>
+          </div>
+          <button class="icon-btn" id="emergencyClose" aria-label="Dismiss"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        </div>
+
+        <div class="welcome" id="welcome">
+          <div class="welcome-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg></div>
+          <svg class="ecg" viewBox="0 0 300 40" preserveAspectRatio="none" aria-hidden="true">
+            <path pathLength="1" d="M0 20h70l8-10 8 10h20l7-17 9 34 8-25 6 8h34l8-8 8 8h104"/>
+          </svg>
+          <h2><span data-i18n="welcomeTitle">How can I help you</span> <span class="gradient-text" data-i18n="today">today?</span></h2>
+          <p data-i18n="welcomeText">Ask about diseases, symptoms, tests or treatments. Answers cite pages from trusted medical references.</p>
+          <div class="suggestions" id="suggestions">
+            <button class="suggestion" data-q="What is diabetes and what are its main types?"><strong>Diabetes</strong><span>What is it and what are its main types?</span></button>
+            <button class="suggestion" data-q="What are the common symptoms of asthma?"><strong>Asthma</strong><span>What are the common symptoms?</span></button>
+            <button class="suggestion suggestion-tool" data-tool="symptom"><strong data-i18n="symptomChecker">Symptom checker</strong><span data-i18n="symptomSub">Answer a few questions to see what care you may need</span></button>
+            <button class="suggestion suggestion-tool" data-tool="labs"><strong data-i18n="labReport">Explain lab report</strong><span data-i18n="labSub">Upload a PDF or photo of your test results</span></button>
+          </div>
+        </div>
+        <div class="messages" id="messages"></div>
+      </section>
+
+      <footer class="composer-wrap">
+        <div class="followups" id="followups"></div>
+        <form class="composer" id="composer" autocomplete="off">
+          <button type="button" class="icon-btn composer-btn" id="attachBtn" data-i18n-title="attach" title="Upload lab report">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11l-8.5 8.5a5 5 0 01-7-7L14 4a3.5 3.5 0 015 5l-8.5 8.5a2 2 0 01-3-3L15 7"/></svg>
+          </button>
+          <label for="input" class="sr-only">Your question</label>
+          <textarea id="input" rows="1" data-i18n-placeholder="placeholder" placeholder="Ask a medical question…" maxlength="{{ max_chars }}" dir="auto" required></textarea>
+          <div class="composer-actions">
+            <span class="counter" id="counter" aria-live="off"></span>
+            <button type="button" class="icon-btn composer-btn" id="micBtn" data-i18n-title="speak" title="Speak" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg>
+            </button>
+            <button type="submit" class="send" id="send" aria-label="Send message" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+        </form>
+        <p class="disclaimer" data-i18n="disclaimer">MediBot gives general information, not medical advice. Always consult a qualified doctor. In an emergency, call your local emergency number.</p>
+      </footer>
+    </main>
+  </div>
+
+  <!-- ============ Dialogs ============ -->
+  <dialog class="modal" id="authModal" aria-labelledby="authTitle">
+    <form method="dialog" class="modal-close-form"><button class="icon-btn modal-x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></form>
+    <h2 id="authTitle" data-i18n="authTitle">Save your chats on every device</h2>
+    <div class="tabs" role="tablist">
+      <button role="tab" class="tab active" data-tab="login" data-i18n="login">Log in</button>
+      <button role="tab" class="tab" data-tab="signup" data-i18n="signup">Sign up</button>
+    </div>
+    <form id="authForm" class="form" novalidate>
+      <label class="field signup-only" hidden><span data-i18n="name">Name</span><input name="name" autocomplete="name" maxlength="80"></label>
+      <label class="field"><span data-i18n="email">Email</span><input name="email" type="email" autocomplete="email" required maxlength="254"></label>
+      <label class="field"><span data-i18n="password">Password</span><input name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128"></label>
+      <p class="hint signup-only" hidden data-i18n="passwordHint">At least 8 characters, with a capital letter and a number.</p>
+      <p class="form-error" id="authError" role="alert" hidden></p>
+      <button class="primary-btn" type="submit" id="authSubmit" data-i18n="login">Log in</button>
+    </form>
+    <div class="google-wrap" id="googleWrap" hidden>
+      <div class="or"><span>or</span></div>
+      <a class="google-btn" href="/auth/google">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21.8 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.5a4.7 4.7 0 01-2 3.1v2.6h3.3c1.9-1.8 3-4.4 3-7.5z" fill="#4285F4" stroke="none"/><path d="M12 22c2.7 0 5-.9 6.7-2.4l-3.3-2.6c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3v2.6A10 10 0 0012 22z" fill="#34A853" stroke="none"/><path d="M6.4 13.9a6 6 0 010-3.8V7.5H3a10 10 0 000 9z" fill="#FBBC05" stroke="none"/><path d="M12 6c1.5 0 2.8.5 3.9 1.5l2.9-2.9A10 10 0 003 7.5l3.4 2.6C7.2 7.8 9.4 6 12 6z" fill="#EA4335" stroke="none"/></svg>
+        <span data-i18n="google">Continue with Google</span>
+      </a>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="labsModal" aria-labelledby="labsTitle">
+    <form method="dialog" class="modal-close-form"><button class="icon-btn modal-x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></form>
+    <h2 id="labsTitle" data-i18n="labReport">Explain lab report</h2>
+    <p class="modal-sub" data-i18n="labIntro">Upload a PDF, or a clear photo or screenshot of your report (max 5 MB). The file is only used to create the explanation and is not stored.</p>
+    <form id="labsForm" class="form">
+      <label class="dropzone" id="dropzone">
+        <input type="file" id="labFile" accept="application/pdf,image/png,image/jpeg,image/webp" required>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
+        <span id="dropText" data-i18n="dropText">Click to choose a file, or drop it here</span>
+        <img id="labPreview" alt="" hidden>
+      </label>
+      <label class="field"><span data-i18n="labNote">Anything to add? (optional)</span><input id="labNote" maxlength="500" data-i18n-placeholder="labNotePh" placeholder="e.g. I'm 45, feeling tired lately"></label>
+      <p class="form-error" id="labsError" role="alert" hidden></p>
+      <button class="primary-btn" type="submit" data-i18n="explain">Explain my report</button>
+    </form>
+  </dialog>
+
+  <dialog class="modal modal-wide" id="medModal" aria-labelledby="medTitle">
+    <form method="dialog" class="modal-close-form"><button class="icon-btn modal-x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></form>
+    <h2 id="medTitle" data-i18n="medicineLookup">Medicine lookup</h2>
+    <form id="medForm" class="med-search">
+      <input id="medQuery" maxlength="60" required data-i18n-placeholder="medPh" placeholder="Medicine name, e.g. ibuprofen, paracetamol">
+      <button class="primary-btn" type="submit" data-i18n="search">Search</button>
+    </form>
+    <div id="medResult" class="med-result" aria-live="polite"></div>
+    <p class="hint" data-i18n="medNote">Source: U.S. FDA drug labels (openFDA). Dosage is not shown. Ask your doctor or pharmacist before taking any medicine.</p>
+  </dialog>
+
+  <dialog class="modal" id="shareModal" aria-labelledby="shareTitle">
+    <form method="dialog" class="modal-close-form"><button class="icon-btn modal-x" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></form>
+    <h2 id="shareTitle" data-i18n="shareTitle">Share this chat</h2>
+    <p class="modal-sub" data-i18n="shareText">Anyone with the link can read this conversation (read-only). You can turn the link off at any time.</p>
+    <div class="share-row"><input id="shareUrl" readonly><button class="primary-btn" id="copyShare" data-i18n="copy">Copy</button></div>
+    <button class="ghost-btn danger" id="unshareBtn" data-i18n="stopSharing">Stop sharing</button>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>

@@ -1,0 +1,5 @@
+# Production extras used by Docker: PostgreSQL driver, Redis for shared rate limits, error tracking.
+-r requirements.txt
+psycopg[binary]==3.2.9
+redis==5.3.1
+sentry-sdk[flask]==2.33.0

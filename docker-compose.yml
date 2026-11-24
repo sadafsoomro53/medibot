@@ -1,0 +1,45 @@
+# MediBot with PostgreSQL (chat history) and Redis (shared rate limits).
+#   docker compose up -d --build      ->  http://localhost:8080
+# Secrets (OPENAI_API_KEY, PINECONE_API_KEY, SECRET_KEY, ...) come from .env.
+# Scale the app with:  docker compose up -d --scale app=3   (put a load balancer in front)
+services:
+  app:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://medibot:${POSTGRES_PASSWORD:-medibot}@db:5432/medibot
+      RATELIMIT_STORAGE_URI: redis://redis:6379/0
+      HOST: 0.0.0.0
+    ports:
+      - "8080:8080"
+    volumes:
+      # chunks.jsonl (keyword search index) built by store-index.py
+      - ./instance/chunks.jsonl:/app/instance/chunks.jsonl:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: medibot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medibot}
+      POSTGRES_DB: medibot
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medibot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+volumes:
+  pgdata:

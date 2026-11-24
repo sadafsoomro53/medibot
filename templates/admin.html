@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin · MediBot</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+  <script src="{{ url_for('static', filename='theme.js') }}"></script>
+  <script src="{{ url_for('static', filename='admin.js') }}" defer></script>
+</head>
+<body class="admin">
+  <header class="admin-top">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z"/></svg></span><span class="brand-name">MediBot Admin</span></a>
+    <span class="admin-user">{{ admin.email }}</span>
+  </header>
+
+  <main class="admin-main">
+    <section class="tiles" aria-label="Key numbers">
+      <div class="tile"><span class="tile-label">Users (accounts)</span><span class="tile-value">{{ totals.users }}</span></div>
+      <div class="tile"><span class="tile-label">Active browsers / users, 7 days</span><span class="tile-value">{{ totals.active7 }}</span></div>
+      <div class="tile"><span class="tile-label">Conversations</span><span class="tile-value">{{ totals.conversations }}</span></div>
+      <div class="tile"><span class="tile-label">Answers given</span><span class="tile-value">{{ totals.answers }}</span></div>
+      <div class="tile"><span class="tile-label">Satisfaction (👍 share of rated)</span>
+        <span class="tile-value">{% if totals.satisfaction is not none %}{{ totals.satisfaction }}%{% else %}–{% endif %}</span>
+        <span class="tile-sub">{{ totals.up }} 👍 · {{ totals.down }} 👎</span></div>
+      <div class="tile"><span class="tile-label">Est. OpenAI cost, 30 days</span><span class="tile-value">${{ '%.2f' % cost30 }}</span>
+        <span class="tile-sub">{{ '{:,}'.format(tokens.input) }} in · {{ '{:,}'.format(tokens.output) }} out tokens</span></div>
+      <div class="tile"><span class="tile-label">Cached answers served</span><span class="tile-value">{{ totals.cache_hits }}</span></div>
+      <div class="tile"><span class="tile-label">Emergency messages flagged</span><span class="tile-value">{{ totals.emergencies }}</span></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Answers per day <span class="muted">· last 14 days</span></h2>
+        <button class="chip" id="toggleTable" aria-pressed="false">Show table</button>
+      </div>
+      <div class="bars" id="bars" role="img" aria-label="Bar chart of answers per day for the last 14 days, peak {{ peak }}">
+        {% for d in days %}
+        <div class="bar-col" data-label="{{ d.label }}" data-count="{{ d.count }}" tabindex="0">
+          <div class="bar" data-h="{{ (100 * d.count / peak) | round(1) if peak else 0 }}"></div>
+          <span class="bar-x">{{ d.label.split(' ')[0] }}</span>
+        </div>
+        {% endfor %}
+        <div class="bar-tip" id="barTip" hidden></div>
+      </div>
+      <table class="data-table" id="dayTable" hidden>
+        <thead><tr><th>Day</th><th class="num">Answers</th></tr></thead>
+        <tbody>{% for d in days %}<tr><td>{{ d.label }}</td><td class="num">{{ d.count }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </section>
+
+    <div class="panel-grid">
+      <section class="panel">
+        <h2>Most asked <span class="muted">· 30 days</span></h2>
+        {% if top_questions %}
+        <ol class="rank">
+          {% for q, n in top_questions %}<li><span class="rank-q">{{ q }}</span><span class="rank-n">{{ n }}</span></li>{% endfor %}
+        </ol>
+        {% else %}<p class="muted">No questions yet.</p>{% endif %}
+      </section>
+
+      <section class="panel">
+        <h2>Answers marked 👎</h2>
+        {% if disliked %}
+        <ul class="disliked">
+          {% for d in disliked %}
+          <li><p class="dq">{{ d.question }}</p><p class="da">{{ d.answer }}{% if d.answer|length >= 400 %}…{% endif %}</p></li>
+          {% endfor %}
+        </ul>
+        {% else %}<p class="muted">No negative feedback yet. 🎉</p>{% endif %}
+      </section>
+    </div>
+    <p class="muted foot">Cost is estimated at ${{ prices[0] }} / ${{ prices[1] }} per 1M input/output tokens (set PRICE_INPUT_PER_M / PRICE_OUTPUT_PER_M).</p>
+  </main>
+</body>
+</html>
